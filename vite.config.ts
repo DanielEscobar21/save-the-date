@@ -17,6 +17,16 @@ export default defineConfig({
         "@emotion/styled",
         "@emotion/react",
       ],
+      output: {
+        globals: {
+          react: "React",
+          "react-dom": "ReactDOM",
+          "react-router-dom": "ReactRouterDOM",
+          "framer-motion": "FramerMotion",
+          "@emotion/styled": "EmotionStyled",
+          "@emotion/react": "EmotionReact",
+        },
+      },
     },
   },
   server: {
@@ -27,4 +37,5 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  publicDir: "public",
 });
