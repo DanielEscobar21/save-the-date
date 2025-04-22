@@ -8,8 +8,16 @@ export default defineConfig({
   build: {
     outDir: "build",
     emptyOutDir: true,
+    rollupOptions: {
+      external: ["react", "react-dom", "react-router-dom"],
+    },
   },
   server: {
     port: 3000,
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
 });
