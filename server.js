@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
-import db from './db.js';
+import dbPromise from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,9 +17,10 @@ app.use(express.json());
 app.use(express.static('build')); // Servir archivos estáticos del frontend
 
 // Get all RSVPs
-app.get('/api/rsvps', (req, res) => {
+app.get('/api/rsvps', async (req, res) => {
   try {
-    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
+    const db = await dbPromise;
+    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
     res.json(rsvps);
   } catch (error) {
     res.status(500).json({ error: 'Error reading RSVPs' });
@@ -27,20 +28,19 @@ app.get('/api/rsvps', (req, res) => {
 });
 
 // Add new RSVP
-app.post('/api/rsvps', (req, res) => {
+app.post('/api/rsvps', async (req, res) => {
   try {
     const { name, email, phone, attending, hasCompanion, companionName, message } = req.body;
     const timestamp = new Date().toISOString();
 
-    const stmt = db.prepare(`
+    const db = await dbPromise;
+    const result = await db.run(`
       INSERT INTO rsvps (name, email, phone, attending, hasCompanion, companionName, message, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, timestamp);
+    `, [name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, timestamp]);
 
     const newRsvp = {
-      id: result.lastInsertRowid,
+      id: result.lastID,
       name,
       email,
       phone,
@@ -58,9 +58,10 @@ app.post('/api/rsvps', (req, res) => {
 });
 
 // View RSVPs in a table format
-app.get('/admin/rsvps', (req, res) => {
+app.get('/admin/rsvps', async (req, res) => {
   try {
-    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
+    const db = await dbPromise;
+    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
@@ -224,9 +225,10 @@ app.get('/admin/rsvps', (req, res) => {
 });
 
 // Generate and download PDF
-app.get('/admin/download-pdf', (req, res) => {
+app.get('/admin/download-pdf', async (req, res) => {
   try {
-    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
+    const db = await dbPromise;
+    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
@@ -325,6 +327,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
