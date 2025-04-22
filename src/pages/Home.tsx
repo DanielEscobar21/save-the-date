@@ -71,6 +71,35 @@ const Subtitle = styled(motion.h2)`
   }
 `;
 
+const VenueText = styled(motion.p)`
+  font-family: "Montserrat", sans-serif;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  color: #a67c52;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  font-weight: 300;
+  letter-spacing: 1px;
+
+  @media (max-width: 480px) {
+    font-size: 1.1rem;
+  }
+`;
+
+const VenueTextSubtitle = styled(motion.p)`
+  font-family: "Montserrat", sans-serif;
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  color: #a67c52;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  font-weight: 300;
+  letter-spacing: 1px;
+  margin-top: -1rem;
+
+  @media (max-width: 480px) {
+    font-size: 0.8rem;
+  }
+`;
+
 const DateText = styled(motion.p)`
   font-family: "Montserrat", sans-serif;
   font-size: clamp(1.4rem, 3vw, 1.8rem);
@@ -212,7 +241,6 @@ const Home = () => {
     days: 0,
     hours: 0,
     minutes: 0,
-    seconds: 0,
   });
 
   useEffect(() => {
@@ -227,9 +255,8 @@ const Home = () => {
         (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
       );
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-      setTimeLeft({ days, hours, minutes, seconds });
+      setTimeLeft({ days, hours, minutes });
     }, 1000);
 
     return () => clearInterval(timer);
@@ -259,13 +286,36 @@ const Home = () => {
         >
           Save the Date
         </Subtitle>
+        <VenueText
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
+          Hacienda Monaco
+        </VenueText>
+        <VenueTextSubtitle
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
+          Sendero de las Haciendas 115, Quinta la Huaracha, 37685 León, Gto.
+          México.
+        </VenueTextSubtitle>
         <DateText
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
         >
-          Viernes, 6 de Marzo, 2026 a las 7:00 PM
+          Viernes, 6 de Marzo, 2026
         </DateText>
+        <Subtitle
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          style={{ fontSize: "1.2rem", marginTop: "-1.2rem" }}
+        >
+          7:00 PM
+        </Subtitle>
 
         <CountdownContainer
           initial={{ opacity: 0, y: 20 }}
@@ -284,14 +334,9 @@ const Home = () => {
             <CountdownNumber>{timeLeft.minutes}</CountdownNumber>
             <CountdownLabel>Minutos</CountdownLabel>
           </CountdownItem>
-          <CountdownItem>
-            <CountdownNumber>{timeLeft.seconds}</CountdownNumber>
-            <CountdownLabel>Segundos</CountdownLabel>
-          </CountdownItem>
         </CountdownContainer>
 
         <ButtonContainer>
-          {/* <StyledLink to="/details">Detalles de la Boda</StyledLink> */}
           <StyledLink to="/rsvp">Confirmar Asistencia</StyledLink>
         </ButtonContainer>
       </ContentWrapper>

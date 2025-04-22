@@ -207,20 +207,93 @@ const BackLink = styled(Link)`
   }
 `;
 
+const WelcomeMessage = styled.div`
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 480px) {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+`;
+
+const WelcomeText = styled.p`
+  font-family: "Playfair Display", serif;
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  color: #8b7355;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  text-align: center;
+`;
+
+const ConfirmationScreen = styled(motion.div)`
+  text-align: center;
+  padding: 2rem;
+`;
+
+const ConfirmationTitle = styled(motion.h2)`
+  font-family: "Playfair Display", serif;
+  color: #8b7355;
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+`;
+
+const ConfirmationText = styled(motion.p)`
+  font-family: "Montserrat", sans-serif;
+  color: #a67c52;
+  margin-bottom: 2rem;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.6;
+`;
+
+const ConfirmationButtonContainer = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+`;
+
 const RSVP = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    guests: "1",
-    attending: "si",
+    phone: "",
+    hasCompanion: false,
+    companionName: "",
+    attending: true,
     message: "",
   });
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí normalmente enviarías los datos a tu backend
-    console.log("RSVP enviado:", formData);
-    alert("¡Gracias por confirmar tu asistencia!");
+    try {
+      const response = await fetch("http://localhost:3001/api/rsvps", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al enviar el RSVP");
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Error:", error);
+      alert(
+        "Hubo un error al enviar tu confirmación. Por favor, intenta de nuevo."
+      );
+    }
   };
 
   const handleChange = (
@@ -228,12 +301,90 @@ const RSVP = () => {
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked =
+      type === "checkbox" ? (e.target as HTMLInputElement).checked : undefined;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
+
+  const addToCalendar = () => {
+    const eventDetails = {
+      title: "Boda de Ian & Jocelyn",
+      description: "¡Te esperamos en nuestra boda!",
+      location:
+        "Hacienda Monaco, Sendero de las Haciendas 115, Quinta la Huaracha, 37685 León, Gto. México",
+      startTime: "20260306T190000",
+      endTime: "20260307T010000",
+    };
+
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      eventDetails.title
+    )}&details=${encodeURIComponent(
+      eventDetails.description
+    )}&location=${encodeURIComponent(eventDetails.location)}&dates=${
+      eventDetails.startTime
+    }/${eventDetails.endTime}`;
+
+    window.open(googleCalendarUrl, "_blank");
+  };
+
+  if (isSubmitted) {
+    return (
+      <RSVPContainer>
+        <Form
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <ConfirmationScreen>
+            <ConfirmationTitle
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              {formData.attending ? "¡Muchas gracias!" : "¡Lo sentimos mucho!"}
+            </ConfirmationTitle>
+            <ConfirmationText
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              {formData.attending ? (
+                <>
+                  {formData.name}, gracias por confirmar tu asistencia. Estamos
+                  muy emocionados de celebrar este día tan especial contigo. ¡Te
+                  esperamos con ansias en nuestra boda! Pronto recibirás la
+                  invitación formal con todos los detalles del evento.
+                </>
+              ) : (
+                <>
+                  {formData.name}, lamentamos mucho que no puedas asistir a
+                  nuestra boda. Entendemos que hay muchas razones por las que no
+                  podrías estar presente, y aunque nos hubiera encantado
+                  celebrar contigo, esperamos verte en otra ocasión. ¡Gracias
+                  por tu mensaje!
+                </>
+              )}
+            </ConfirmationText>
+            <ConfirmationButtonContainer
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              {formData.attending && (
+                <Button onClick={addToCalendar}>Agregar al Calendario</Button>
+              )}
+              <BackLink to="/">Volver al Inicio</BackLink>
+            </ConfirmationButtonContainer>
+          </ConfirmationScreen>
+        </Form>
+      </RSVPContainer>
+    );
+  }
 
   return (
     <RSVPContainer>
@@ -244,7 +395,13 @@ const RSVP = () => {
         onSubmit={handleSubmit}
       >
         <Title>Confirmar Asistencia</Title>
-
+        <WelcomeText>
+          Por favor, tómate un momento para confirmar tu asistencia y ayudarnos
+          a planificar este día inolvidable. Tu presencia es muy importante para
+          nosotros y nos encantaría celebrar juntos este nuevo capítulo de
+          nuestras vidas. En su momento, recibirás la invitación formal con
+          todos los detalles del evento.
+        </WelcomeText>
         <FormGroup>
           <Label htmlFor="name">Nombre</Label>
           <Input
@@ -256,7 +413,6 @@ const RSVP = () => {
             required
           />
         </FormGroup>
-
         <FormGroup>
           <Label htmlFor="email">Correo Electrónico</Label>
           <Input
@@ -268,35 +424,70 @@ const RSVP = () => {
             required
           />
         </FormGroup>
-
         <FormGroup>
-          <Label htmlFor="guests">Número de Invitados</Label>
-          <Select
-            id="guests"
-            name="guests"
-            value={formData.guests}
+          <Label htmlFor="phone">Teléfono</Label>
+          <Input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
             onChange={handleChange}
-          >
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </Select>
+            required
+          />
         </FormGroup>
-
         <FormGroup>
           <Label htmlFor="attending">¿Asistirás a la boda?</Label>
           <Select
             id="attending"
             name="attending"
-            value={formData.attending}
-            onChange={handleChange}
+            value={formData.attending ? "true" : "false"}
+            onChange={(e) => {
+              setFormData((prev) => ({
+                ...prev,
+                attending: e.target.value === "true",
+              }));
+            }}
           >
-            <option value="si">Sí, ¡estaré allí!</option>
-            <option value="no">No, no podré asistir</option>
+            <option value="true">Sí, ¡estaré allí!</option>
+            <option value="false">No, no podré asistir</option>
           </Select>
         </FormGroup>
-
+        {formData.attending && (
+          <>
+            <FormGroup>
+              <Label>
+                ¿Llevarás algún acompañante?
+                <Select
+                  name="hasCompanion"
+                  value={formData.hasCompanion ? "true" : "false"}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      hasCompanion: e.target.value === "true",
+                    }));
+                  }}
+                  style={{ marginLeft: "1rem", width: "auto" }}
+                >
+                  <option value="false">No</option>
+                  <option value="true">Sí</option>
+                </Select>
+              </Label>
+            </FormGroup>
+            {formData.hasCompanion && (
+              <FormGroup>
+                <Label htmlFor="companionName">Nombre del Acompañante</Label>
+                <Input
+                  type="text"
+                  id="companionName"
+                  name="companionName"
+                  value={formData.companionName}
+                  onChange={handleChange}
+                  required
+                />
+              </FormGroup>
+            )}
+          </>
+        )}
         <FormGroup>
           <Label htmlFor="message">Mensaje (opcional)</Label>
           <TextArea
@@ -307,7 +498,6 @@ const RSVP = () => {
             rows={4}
           />
         </FormGroup>
-
         <Button type="submit">Enviar Confirmación</Button>
       </Form>
 
