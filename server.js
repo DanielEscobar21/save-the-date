@@ -14,7 +14,9 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('build')); // Servir archivos estáticos del frontend
+
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Get all RSVPs
 app.get('/api/rsvps', async (req, res) => {
@@ -322,7 +324,7 @@ app.get('/admin/download-pdf', async (req, res) => {
   }
 });
 
-// Serve React app
+// Servir la aplicación React para cualquier otra ruta
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
