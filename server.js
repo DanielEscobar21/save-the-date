@@ -324,7 +324,7 @@ app.get('/admin/download-pdf', async (req, res) => {
   }
 });
 
-// Servir la aplicación React para cualquier otra ruta
+// Handle client-side routing - must be after all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
