@@ -9,7 +9,7 @@ export default defineConfig({
     outDir: "build",
     emptyOutDir: true,
     rollupOptions: {
-      external: ["react", "react-dom", "react-router-dom"],
+      external: ["react", "react-dom", "react-router-dom", "framer-motion"],
     },
   },
   server: {
