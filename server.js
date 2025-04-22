@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
+import db from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,18 +16,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('build')); // Servir archivos estáticos del frontend
 
-// File path for storing RSVPs
-const RSVP_FILE = path.join(__dirname, 'rsvps.json');
-
-// Ensure the file exists
-if (!fs.existsSync(RSVP_FILE)) {
-  fs.writeFileSync(RSVP_FILE, JSON.stringify([]));
-}
-
 // Get all RSVPs
 app.get('/api/rsvps', (req, res) => {
   try {
-    const rsvps = JSON.parse(fs.readFileSync(RSVP_FILE, 'utf8'));
+    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
     res.json(rsvps);
   } catch (error) {
     res.status(500).json({ error: 'Error reading RSVPs' });
@@ -37,13 +29,28 @@ app.get('/api/rsvps', (req, res) => {
 // Add new RSVP
 app.post('/api/rsvps', (req, res) => {
   try {
-    const rsvps = JSON.parse(fs.readFileSync(RSVP_FILE, 'utf8'));
+    const { name, email, phone, attending, hasCompanion, companionName, message } = req.body;
+    const timestamp = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      INSERT INTO rsvps (name, email, phone, attending, hasCompanion, companionName, message, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const result = stmt.run(name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, timestamp);
+
     const newRsvp = {
-      ...req.body,
-      timestamp: new Date().toISOString()
+      id: result.lastInsertRowid,
+      name,
+      email,
+      phone,
+      attending,
+      hasCompanion,
+      companionName,
+      message,
+      timestamp
     };
-    rsvps.push(newRsvp);
-    fs.writeFileSync(RSVP_FILE, JSON.stringify(rsvps, null, 2));
+
     res.status(201).json(newRsvp);
   } catch (error) {
     res.status(500).json({ error: 'Error saving RSVP' });
@@ -53,9 +60,9 @@ app.post('/api/rsvps', (req, res) => {
 // View RSVPs in a table format
 app.get('/admin/rsvps', (req, res) => {
   try {
-    const rsvps = JSON.parse(fs.readFileSync(RSVP_FILE, 'utf8'));
-    const attending = rsvps.filter(rsvp => rsvp.attending);
-    const notAttending = rsvps.filter(rsvp => !rsvp.attending);
+    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
+    const attending = rsvps.filter(rsvp => rsvp.attending === 1);
+    const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
     const html = `
       <!DOCTYPE html>
@@ -171,8 +178,8 @@ app.get('/admin/rsvps', (req, res) => {
                   <tr>
                     <td>${rsvp.name}</td>
                     <td>${rsvp.email}</td>
-                    <td>${rsvp.phone}</td>
-                    <td>${rsvp.hasCompanion ? 'Sí' : 'No'}</td>
+                    <td>${rsvp.phone || '-'}</td>
+                    <td>${rsvp.hasCompanion === 1 ? 'Sí' : 'No'}</td>
                     <td>${rsvp.companionName || '-'}</td>
                     <td>${rsvp.message || '-'}</td>
                     <td>${new Date(rsvp.timestamp).toLocaleString()}</td>
@@ -199,7 +206,7 @@ app.get('/admin/rsvps', (req, res) => {
                   <tr>
                     <td>${rsvp.name}</td>
                     <td>${rsvp.email}</td>
-                    <td>${rsvp.phone}</td>
+                    <td>${rsvp.phone || '-'}</td>
                     <td>${rsvp.message || '-'}</td>
                     <td>${new Date(rsvp.timestamp).toLocaleString()}</td>
                   </tr>
@@ -219,9 +226,9 @@ app.get('/admin/rsvps', (req, res) => {
 // Generate and download PDF
 app.get('/admin/download-pdf', (req, res) => {
   try {
-    const rsvps = JSON.parse(fs.readFileSync(RSVP_FILE, 'utf8'));
-    const attending = rsvps.filter(rsvp => rsvp.attending);
-    const notAttending = rsvps.filter(rsvp => !rsvp.attending);
+    const rsvps = db.prepare('SELECT * FROM rsvps ORDER BY timestamp DESC').all();
+    const attending = rsvps.filter(rsvp => rsvp.attending === 1);
+    const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
     const doc = new PDFDocument({
       size: 'A4',
@@ -252,123 +259,63 @@ app.get('/admin/download-pdf', (req, res) => {
       .text(`No Asistentes: ${notAttending.length}`)
       .moveDown();
 
-    // Add date
-    doc.fontSize(10)
-      .fillColor('#666666')
-      .text(`Generado el ${new Date().toLocaleDateString()}`)
+    // Add attending guests table
+    doc.fontSize(16)
+      .fillColor('#8b7355')
+      .text('Asistentes', { underline: true })
       .moveDown();
 
-    // Function to create table
-    const createTable = (title, headers, data, rowFormatter) => {
-      // Add table title
-      doc.fontSize(16)
-        .fillColor('#8b7355')
-        .text(title)
-        .moveDown(0.5);
-
-      const pageWidth = doc.page.width - 80;
-      const colWidth = pageWidth / headers.length;
-
-      // Draw table headers
-      doc.fontSize(11)
-        .fillColor('#ffffff');
-
-      let currentX = 40;
-      let currentY = doc.y;
-
-      // Header background
-      doc.rect(currentX, currentY, pageWidth, 25)
-        .fill('#8b7355');
-
-      // Header texts
-      headers.forEach((header, i) => {
-        doc.fillColor('#ffffff')
-          .text(header,
-            currentX + 5,
-            currentY + 7,
-            { width: colWidth - 10 });
-        currentX += colWidth;
-      });
-
-      doc.moveDown(0.5);
-
-      // Draw rows
-      data.forEach((item, index) => {
-        currentY = doc.y;
-        currentX = 40;
-
-        // Row background for even rows
-        if (index % 2 === 0) {
-          doc.rect(currentX, currentY, pageWidth, 25)
-            .fill('#f5f5f5');
-        }
-
-        // Row data
-        const rowData = rowFormatter(item);
-        rowData.forEach(text => {
-          doc.fillColor('#000000')
-            .fontSize(10)
-            .text(text,
-              currentX + 5,
-              currentY + 7,
-              { width: colWidth - 10 });
-          currentX += colWidth;
-        });
-
-        doc.moveDown(0.5);
-      });
-
-      doc.moveDown();
-    };
-
-    // Create attending table
-    createTable(
-      'Asistentes',
-      ['Nombre', 'Email', 'Teléfono', 'Acompañante', 'Nombre Acompañante'],
-      attending,
-      (rsvp) => [
-        rsvp.name,
-        rsvp.email,
-        rsvp.phone,
-        rsvp.hasCompanion ? 'Sí' : 'No',
-        rsvp.companionName || '-'
-      ]
-    );
-
-    // Add page break
-    doc.addPage({
-      size: 'A4',
-      layout: 'landscape',
-      margin: 40
+    // Table headers
+    const headers = ['Nombre', 'Email', 'Teléfono', 'Acompañante', 'Nombre Acompañante', 'Mensaje'];
+    let x = 40;
+    headers.forEach(header => {
+      doc.fontSize(10)
+        .fillColor('#000000')
+        .text(header, x, doc.y, { width: 100 });
+      x += 100;
     });
 
-    // Create non-attending table
-    createTable(
-      'No Asistentes',
-      ['Nombre', 'Email', 'Teléfono', 'Mensaje'],
-      notAttending,
-      (rsvp) => [
-        rsvp.name,
-        rsvp.email,
-        rsvp.phone,
-        rsvp.message || '-'
-      ]
-    );
+    // Table rows
+    attending.forEach(rsvp => {
+      doc.moveDown()
+        .fontSize(8)
+        .text(rsvp.name, 40, doc.y, { width: 100 })
+        .text(rsvp.email, 140, doc.y, { width: 100 })
+        .text(rsvp.phone || '-', 240, doc.y, { width: 100 })
+        .text(rsvp.hasCompanion === 1 ? 'Sí' : 'No', 340, doc.y, { width: 100 })
+        .text(rsvp.companionName || '-', 440, doc.y, { width: 100 })
+        .text(rsvp.message || '-', 540, doc.y, { width: 100 });
+    });
 
-    // Add footer
-    doc.fontSize(8)
-      .fillColor('#666666')
-      .text(
-        'Generado el ' + new Date().toLocaleDateString(),
-        40,
-        doc.page.height - 40,
-        { align: 'left' }
-      );
+    // Add new page for non-attending guests
+    doc.addPage()
+      .fontSize(16)
+      .fillColor('#8b7355')
+      .text('No Asistentes', { underline: true })
+      .moveDown();
 
-    // Finalize the PDF
+    // Table headers for non-attending
+    const nonAttendingHeaders = ['Nombre', 'Email', 'Teléfono', 'Mensaje'];
+    x = 40;
+    nonAttendingHeaders.forEach(header => {
+      doc.fontSize(10)
+        .fillColor('#000000')
+        .text(header, x, doc.y, { width: 150 });
+      x += 150;
+    });
+
+    // Table rows for non-attending
+    notAttending.forEach(rsvp => {
+      doc.moveDown()
+        .fontSize(8)
+        .text(rsvp.name, 40, doc.y, { width: 150 })
+        .text(rsvp.email, 190, doc.y, { width: 150 })
+        .text(rsvp.phone || '-', 340, doc.y, { width: 150 })
+        .text(rsvp.message || '-', 490, doc.y, { width: 150 });
+    });
+
     doc.end();
   } catch (error) {
-    console.error('Error generating PDF:', error);
     res.status(500).send('Error generating PDF');
   }
 });
