@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import Details from "./pages/Details";
 import RSVP from "./pages/RSVP";
 import PageTransition from "./components/PageTransition";
+import Footer from "./components/Footer";
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -46,6 +47,7 @@ const App = () => {
         <BackgroundImage />
         <ContentContainer>
           <AnimatedRoutes />
+          <Footer />
         </ContentContainer>
       </AppContainer>
     </Router>

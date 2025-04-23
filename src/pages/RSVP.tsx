@@ -26,7 +26,7 @@ const Form = styled(motion.form)`
   backdrop-filter: blur(5px);
 
   @media (max-width: 480px) {
-    padding: 1.5rem;
+    padding: 1rem;
     margin: 0.5rem;
   }
 `;
@@ -53,15 +53,16 @@ const Title = styled.h2`
 
   @media (max-width: 480px) {
     font-size: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
   }
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 
   @media (max-width: 480px) {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
   }
 `;
 
@@ -72,6 +73,11 @@ const Label = styled.label`
   margin-bottom: 0.5rem;
   font-size: clamp(0.9rem, 2vw, 1rem);
   letter-spacing: 1px;
+
+  @media (max-width: 480px) {
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+  }
 `;
 
 const Input = styled.input`
@@ -95,8 +101,8 @@ const Input = styled.input`
   }
 
   @media (max-width: 480px) {
-    padding: 0.7rem;
-    font-size: 0.95rem;
+    padding: 0.6rem;
+    font-size: 0.9rem;
   }
 `;
 
@@ -122,8 +128,8 @@ const TextArea = styled.textarea`
   }
 
   @media (max-width: 480px) {
-    padding: 0.7rem;
-    font-size: 0.95rem;
+    padding: 0.6rem;
+    font-size: 0.9rem;
   }
 `;
 
@@ -150,8 +156,8 @@ const Select = styled.select`
   }
 
   @media (max-width: 480px) {
-    padding: 0.7rem;
-    font-size: 0.95rem;
+    padding: 0.6rem;
+    font-size: 0.9rem;
   }
 `;
 
@@ -176,14 +182,14 @@ const Button = styled.button`
   }
 
   @media (max-width: 480px) {
-    padding: 0.8rem;
-    font-size: 0.95rem;
+    padding: 0.7rem;
+    font-size: 0.9rem;
   }
 `;
 
 const BackLink = styled(Link)`
   display: inline-block;
-  margin-top: 2rem;
+  margin-top: 1rem;
   padding: 1rem 2rem;
   background: #8b7355;
   color: white;
@@ -211,16 +217,16 @@ const WelcomeMessage = styled.div`
   max-width: 800px;
   width: 100%;
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 20px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 
   @media (max-width: 480px) {
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
   }
 `;
 
@@ -231,6 +237,12 @@ const WelcomeText = styled.p`
   line-height: 1.6;
   margin-bottom: 1rem;
   text-align: center;
+
+  @media (max-width: 480px) {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+  }
 `;
 
 const ConfirmationScreen = styled(motion.div)`
@@ -258,6 +270,20 @@ const ConfirmationButtonContainer = styled(motion.div)`
   flex-direction: column;
   gap: 1rem;
   align-items: center;
+`;
+
+const DeadlineMessage = styled.p`
+  font-family: "Montserrat", sans-serif;
+  color: #a67c52;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 1rem;
+  font-style: italic;
+
+  @media (max-width: 480px) {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
 `;
 
 const RSVP = () => {
@@ -502,6 +528,9 @@ const RSVP = () => {
           />
         </FormGroup>
         <Button type="submit">Enviar Confirmación</Button>
+        <DeadlineMessage>
+          Fecha límite para confirmar: 6 de Septiembre
+        </DeadlineMessage>
       </Form>
 
       <BackLink to="/">Volver al Inicio</BackLink>
