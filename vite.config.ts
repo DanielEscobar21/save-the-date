@@ -9,22 +9,12 @@ export default defineConfig({
     outDir: "build",
     emptyOutDir: true,
     rollupOptions: {
-      external: [
-        "react",
-        "react-dom",
-        "react-router-dom",
-        "framer-motion",
-        "@emotion/styled",
-        "@emotion/react",
-      ],
       output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "react-router-dom": "ReactRouterDOM",
-          "framer-motion": "FramerMotion",
-          "@emotion/styled": "EmotionStyled",
-          "@emotion/react": "EmotionReact",
+        manualChunks: {
+          "react-vendor": ["react", "react-dom"],
+          "router-vendor": ["react-router-dom"],
+          "animation-vendor": ["framer-motion"],
+          "emotion-vendor": ["@emotion/styled", "@emotion/react"],
         },
       },
     },
