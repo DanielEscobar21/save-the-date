@@ -280,15 +280,18 @@ app.get('/admin/download-pdf', async (req, res) => {
     });
 
     // Table rows
-    attending.forEach(rsvp => {
-      doc.moveDown()
-        .fontSize(8)
-        .text(rsvp.name, 40, doc.y, { width: 100 })
-        .text(rsvp.email, 140, doc.y, { width: 100 })
-        .text(rsvp.phone || '-', 240, doc.y, { width: 100 })
-        .text(rsvp.hasCompanion === 1 ? 'Sí' : 'No', 340, doc.y, { width: 100 })
-        .text(rsvp.companionName || '-', 440, doc.y, { width: 100 })
-        .text(rsvp.message || '-', 540, doc.y, { width: 100 });
+    let startY = doc.y + 10;
+    const rowHeight = 20;
+
+    attending.forEach((rsvp, i) => {
+      const y = startY + i * rowHeight;
+      doc.fontSize(8)
+        .text(rsvp.name, 40, y, { width: 100 })
+        .text(rsvp.email, 140, y, { width: 100 })
+        .text(rsvp.phone || '-', 240, y, { width: 100 })
+        .text(rsvp.hasCompanion === 1 ? 'Sí' : 'No', 340, y, { width: 100 })
+        .text(rsvp.companionName || '-', 440, y, { width: 100 })
+        .text(rsvp.message || '-', 540, y, { width: 100 });
     });
 
     // Add new page for non-attending guests
@@ -309,13 +312,14 @@ app.get('/admin/download-pdf', async (req, res) => {
     });
 
     // Table rows for non-attending
-    notAttending.forEach(rsvp => {
+    notAttending.forEach((rsvp, i) => {
+      const y = startY + i * rowHeight;
       doc.moveDown()
         .fontSize(8)
-        .text(rsvp.name, 40, doc.y, { width: 150 })
-        .text(rsvp.email, 190, doc.y, { width: 150 })
-        .text(rsvp.phone || '-', 340, doc.y, { width: 150 })
-        .text(rsvp.message || '-', 490, doc.y, { width: 150 });
+        .text(rsvp.name, 40, y, { width: 150 })
+        .text(rsvp.email, 190, y, { width: 150 })
+        .text(rsvp.phone || '-', 340, y, { width: 150 })
+        .text(rsvp.message || '-', 490, y, { width: 150 });
     });
 
     doc.end();
