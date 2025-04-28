@@ -67,6 +67,9 @@ app.get('/admin/rsvps', async (req, res) => {
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
+    // Contar asistentes incluyendo acompañantes
+    const totalAttending = attending.reduce((sum, rsvp) => sum + 1 + (rsvp.hasCompanion === 1 ? 1 : 0), 0);
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -149,7 +152,7 @@ app.get('/admin/rsvps', async (req, res) => {
           
           <div class="stats">
             <div class="stat-item">
-              <div class="stat-number">${attending.length}</div>
+              <div class="stat-number">${totalAttending}</div>
               <div class="stat-label">Asistentes</div>
             </div>
             <div class="stat-item">
@@ -163,7 +166,7 @@ app.get('/admin/rsvps', async (req, res) => {
           </div>
 
           <div class="table-container">
-            <h2>Asistentes (${attending.length})</h2>
+            <h2>Asistentes (${totalAttending})</h2>
             <table>
               <thead>
                 <tr>
@@ -177,17 +180,20 @@ app.get('/admin/rsvps', async (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${attending.map(rsvp => `
-                  <tr>
-                    <td>${rsvp.name}</td>
-                    <td>${rsvp.email}</td>
-                    <td>${rsvp.phone || '-'}</td>
-                    <td>${rsvp.hasCompanion === 1 ? 'Sí' : 'No'}</td>
-                    <td>${rsvp.companionName || '-'}</td>
-                    <td>${rsvp.message || '-'}</td>
-                    <td>${new Date(rsvp.timestamp).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
+                ${attending.map(rsvp => {
+      const fecha = new Date(rsvp.timestamp).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      return `
+                    <tr>
+                      <td>${rsvp.name}</td>
+                      <td>${rsvp.email}</td>
+                      <td>${rsvp.phone || '-'}</td>
+                      <td>${rsvp.hasCompanion === 1 ? 'Sí' : 'No'}</td>
+                      <td>${rsvp.companionName || '-'}</td>
+                      <td>${rsvp.message || '-'}</td>
+                      <td>${fecha}</td>
+                    </tr>
+                  `;
+    }).join('')}
               </tbody>
             </table>
           </div>
@@ -205,15 +211,18 @@ app.get('/admin/rsvps', async (req, res) => {
                 </tr>
               </thead>
               <tbody>
-                ${notAttending.map(rsvp => `
-                  <tr>
-                    <td>${rsvp.name}</td>
-                    <td>${rsvp.email}</td>
-                    <td>${rsvp.phone || '-'}</td>
-                    <td>${rsvp.message || '-'}</td>
-                    <td>${new Date(rsvp.timestamp).toLocaleString()}</td>
-                  </tr>
-                `).join('')}
+                ${notAttending.map(rsvp => {
+      const fecha = new Date(rsvp.timestamp).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
+      return `
+                    <tr>
+                      <td>${rsvp.name}</td>
+                      <td>${rsvp.email}</td>
+                      <td>${rsvp.phone || '-'}</td>
+                      <td>${rsvp.message || '-'}</td>
+                      <td>${fecha}</td>
+                    </tr>
+                  `;
+    }).join('')}
               </tbody>
             </table>
           </div>
