@@ -234,6 +234,9 @@ app.get('/admin/download-pdf', async (req, res) => {
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
+    // Contar asistentes incluyendo acompañantes
+    const totalAttending = attending.reduce((sum, rsvp) => sum + 1 + (rsvp.hasCompanion === 1 ? 1 : 0), 0);
+
     const doc = new PDFDocument({
       size: 'A4',
       layout: 'landscape',
@@ -259,7 +262,7 @@ app.get('/admin/download-pdf', async (req, res) => {
     doc.fontSize(14)
       .text('Estadísticas', { continued: true })
       .text(`    Total: ${rsvps.length}    `, { continued: true })
-      .text(`Asistentes: ${attending.length}    `, { continued: true })
+      .text(`Asistentes: ${totalAttending}    `, { continued: true })
       .text(`No Asistentes: ${notAttending.length}`)
       .moveDown();
 
@@ -267,59 +270,81 @@ app.get('/admin/download-pdf', async (req, res) => {
     doc.fontSize(16)
       .fillColor('#8b7355')
       .text('Asistentes', { underline: true })
-      .moveDown();
+      .moveDown(0.5);
 
     // Table headers
     const headers = ['Nombre', 'Email', 'Teléfono', 'Acompañante', 'Nombre Acompañante', 'Mensaje'];
+    const colWidths = [120, 180, 100, 80, 140, 200];
     let x = 40;
-    headers.forEach(header => {
+    let y = doc.y;
+    headers.forEach((header, idx) => {
       doc.fontSize(10)
         .fillColor('#000000')
-        .text(header, x, doc.y, { width: 100 });
-      x += 100;
+        .text(header, x, y, { width: colWidths[idx], align: 'left' });
+      x += colWidths[idx];
     });
 
     // Table rows
-    let startY = doc.y + 10;
-    const rowHeight = 20;
-
-    attending.forEach((rsvp, i) => {
-      const y = startY + i * rowHeight;
+    y += 18; // Espacio después de encabezados
+    attending.forEach((rsvp) => {
+      x = 40;
       doc.fontSize(8)
-        .text(rsvp.name, 40, y, { width: 100 })
-        .text(rsvp.email, 140, y, { width: 100 })
-        .text(rsvp.phone || '-', 240, y, { width: 100 })
-        .text(rsvp.hasCompanion === 1 ? 'Sí' : 'No', 340, y, { width: 100 })
-        .text(rsvp.companionName || '-', 440, y, { width: 100 })
-        .text(rsvp.message || '-', 540, y, { width: 100 });
+        .text(rsvp.name, x, y, { width: colWidths[0] });
+      x += colWidths[0];
+      doc.text(rsvp.email, x, y, { width: colWidths[1] });
+      x += colWidths[1];
+      doc.text(rsvp.phone || '-', x, y, { width: colWidths[2] });
+      x += colWidths[2];
+      doc.text(rsvp.hasCompanion === 1 ? 'Sí' : 'No', x, y, { width: colWidths[3] });
+      x += colWidths[3];
+      doc.text(rsvp.companionName || '-', x, y, { width: colWidths[4] });
+      x += colWidths[4];
+      doc.text(rsvp.message || '-', x, y, { width: colWidths[5] });
+      y += 16;
+      // Salto de página si es necesario
+      if (y > doc.page.height - 40) {
+        doc.addPage();
+        y = 40;
+      }
     });
 
     // Add new page for non-attending guests
-    doc.addPage()
-      .fontSize(16)
+    doc.addPage();
+    y = 40;
+    doc.fontSize(16)
       .fillColor('#8b7355')
-      .text('No Asistentes', { underline: true })
-      .moveDown();
+      .text('No Asistentes', 40, y, { underline: true });
+    y += 28;
 
     // Table headers for non-attending
     const nonAttendingHeaders = ['Nombre', 'Email', 'Teléfono', 'Mensaje'];
+    const nonColWidths = [120, 180, 100, 400];
     x = 40;
-    nonAttendingHeaders.forEach(header => {
+    nonAttendingHeaders.forEach((header, idx) => {
       doc.fontSize(10)
         .fillColor('#000000')
-        .text(header, x, doc.y, { width: 150 });
-      x += 150;
+        .text(header, x, y, { width: nonColWidths[idx], align: 'left' });
+      x += nonColWidths[idx];
     });
+    y += 18;
 
     // Table rows for non-attending
-    notAttending.forEach((rsvp, i) => {
-      const y = startY + i * rowHeight;
-      doc.moveDown()
-        .fontSize(8)
-        .text(rsvp.name, 40, y, { width: 150 })
-        .text(rsvp.email, 190, y, { width: 150 })
-        .text(rsvp.phone || '-', 340, y, { width: 150 })
-        .text(rsvp.message || '-', 490, y, { width: 150 });
+    notAttending.forEach((rsvp) => {
+      x = 40;
+      doc.fontSize(8)
+        .text(rsvp.name, x, y, { width: nonColWidths[0] });
+      x += nonColWidths[0];
+      doc.text(rsvp.email, x, y, { width: nonColWidths[1] });
+      x += nonColWidths[1];
+      doc.text(rsvp.phone || '-', x, y, { width: nonColWidths[2] });
+      x += nonColWidths[2];
+      doc.text(rsvp.message || '-', x, y, { width: nonColWidths[3] });
+      y += 16;
+      // Salto de página si es necesario
+      if (y > doc.page.height - 40) {
+        doc.addPage();
+        y = 40;
+      }
     });
 
     doc.end();
