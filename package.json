@@ -7,9 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "npm install && npm run build:frontend",
-    "serve": "npm run serve:frontend",
     "build:frontend": "vite build",
-    "serve:frontend": "vite preview",
     "postinstall": "echo 'Installation complete'"
   },
   "dependencies": {
