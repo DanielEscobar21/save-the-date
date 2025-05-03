@@ -34,7 +34,9 @@ app.get('/api/rsvps', async (req, res) => {
 app.post('/api/rsvps', async (req, res) => {
   try {
     const { name, email, phone, attending, hasCompanion, companionName, message } = req.body;
-    const timestamp = new Date().toISOString();
+
+    // Formato compatible con MySQL
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const db = await dbPromise;
     const [result] = await db.execute(`
