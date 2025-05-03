@@ -63,6 +63,53 @@ app.post('/api/rsvps', async (req, res) => {
   }
 });
 
+// Delete RSVP
+app.delete('/api/rsvps/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const db = await dbPromise;
+    const [result] = await db.execute('DELETE FROM rsvps WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'RSVP not found' });
+    }
+
+    res.status(200).json({ message: 'RSVP deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting RSVP:', error);
+    res.status(500).json({ error: 'Error deleting RSVP' });
+  }
+});
+
+// Update RSVP
+app.put('/api/rsvps/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, attending, hasCompanion, companionName, message } = req.body;
+
+    const db = await dbPromise;
+    const [result] = await db.execute(`
+      UPDATE rsvps 
+      SET name = ?, email = ?, phone = ?, attending = ?, 
+          hasCompanion = ?, companionName = ?, message = ?
+      WHERE id = ?
+    `, [name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'RSVP not found' });
+    }
+
+    // Obtener el RSVP actualizado
+    const [updatedRsvp] = await db.execute('SELECT * FROM rsvps WHERE id = ?', [id]);
+
+    res.status(200).json(updatedRsvp[0]);
+  } catch (error) {
+    console.error('Error updating RSVP:', error);
+    res.status(500).json({ error: 'Error updating RSVP' });
+  }
+});
+
 // View RSVPs in a table format
 app.get('/admin/rsvps', async (req, res) => {
   try {
@@ -147,6 +194,73 @@ app.get('/admin/rsvps', async (req, res) => {
             .download-button:hover {
               background-color: #a67c52;
             }
+            .action-buttons {
+              display: flex;
+              gap: 5px;
+            }
+            .edit-btn, .delete-btn {
+              padding: 5px 10px;
+              border: none;
+              border-radius: 3px;
+              cursor: pointer;
+              font-size: 12px;
+            }
+            .edit-btn {
+              background-color: #4CAF50;
+              color: white;
+            }
+            .delete-btn {
+              background-color: #f44336;
+              color: white;
+            }
+            .modal {
+              display: none;
+              position: fixed;
+              z-index: 1;
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              overflow: auto;
+              background-color: rgba(0,0,0,0.4);
+            }
+            .modal-content {
+              background-color: #fefefe;
+              margin: 10% auto;
+              padding: 20px;
+              border: 1px solid #888;
+              width: 50%;
+              border-radius: 5px;
+            }
+            .close {
+              color: #aaa;
+              float: right;
+              font-size: 28px;
+              font-weight: bold;
+              cursor: pointer;
+            }
+            .form-group {
+              margin-bottom: 15px;
+            }
+            .form-group label {
+              display: block;
+              margin-bottom: 5px;
+              font-weight: bold;
+            }
+            .form-group input, .form-group textarea, .form-group select {
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            }
+            .save-btn {
+              background-color: #4CAF50;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 4px;
+              cursor: pointer;
+            }
           </style>
         </head>
         <body>
@@ -181,6 +295,7 @@ app.get('/admin/rsvps', async (req, res) => {
                   <th>Nombre Acompañante</th>
                   <th>Mensaje</th>
                   <th>Fecha</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -195,6 +310,12 @@ app.get('/admin/rsvps', async (req, res) => {
                       <td>${rsvp.companionName || '-'}</td>
                       <td>${rsvp.message || '-'}</td>
                       <td>${fecha}</td>
+                      <td>
+                        <div class="action-buttons">
+                          <button class="edit-btn" onclick="openEditModal(${JSON.stringify(rsvp).replace(/"/g, '&quot;')})">Editar</button>
+                          <button class="delete-btn" onclick="deleteRsvp(${rsvp.id})">Eliminar</button>
+                        </div>
+                      </td>
                     </tr>
                   `;
     }).join('')}
@@ -212,6 +333,7 @@ app.get('/admin/rsvps', async (req, res) => {
                   <th>Teléfono</th>
                   <th>Mensaje</th>
                   <th>Fecha</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,12 +346,162 @@ app.get('/admin/rsvps', async (req, res) => {
                       <td>${rsvp.phone || '-'}</td>
                       <td>${rsvp.message || '-'}</td>
                       <td>${fecha}</td>
+                      <td>
+                        <div class="action-buttons">
+                          <button class="edit-btn" onclick="openEditModal(${JSON.stringify(rsvp).replace(/"/g, '&quot;')})">Editar</button>
+                          <button class="delete-btn" onclick="deleteRsvp(${rsvp.id})">Eliminar</button>
+                        </div>
+                      </td>
                     </tr>
                   `;
     }).join('')}
               </tbody>
             </table>
           </div>
+
+          <!-- Modal para editar RSVP -->
+          <div id="editModal" class="modal">
+            <div class="modal-content">
+              <span class="close" onclick="closeEditModal()">&times;</span>
+              <h2>Editar RSVP</h2>
+              <form id="editForm">
+                <input type="hidden" id="rsvpId">
+                <div class="form-group">
+                  <label for="name">Nombre:</label>
+                  <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                  <label for="email">Email:</label>
+                  <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                  <label for="phone">Teléfono:</label>
+                  <input type="text" id="phone">
+                </div>
+                <div class="form-group">
+                  <label for="attending">Asistirá:</label>
+                  <select id="attending" onchange="toggleCompanionFields()">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                  </select>
+                </div>
+                <div id="companionSection">
+                  <div class="form-group">
+                    <label for="hasCompanion">Llevará acompañante:</label>
+                    <select id="hasCompanion" onchange="toggleCompanionNameField()">
+                      <option value="1">Sí</option>
+                      <option value="0">No</option>
+                    </select>
+                  </div>
+                  <div class="form-group" id="companionNameGroup">
+                    <label for="companionName">Nombre del acompañante:</label>
+                    <input type="text" id="companionName">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="message">Mensaje:</label>
+                  <textarea id="message" rows="3"></textarea>
+                </div>
+                <button type="button" class="save-btn" onclick="saveRsvp()">Guardar cambios</button>
+              </form>
+            </div>
+          </div>
+
+          <script>
+            // Función para abrir el modal de edición
+            function openEditModal(rsvp) {
+              document.getElementById('rsvpId').value = rsvp.id;
+              document.getElementById('name').value = rsvp.name;
+              document.getElementById('email').value = rsvp.email;
+              document.getElementById('phone').value = rsvp.phone || '';
+              document.getElementById('attending').value = rsvp.attending;
+              document.getElementById('hasCompanion').value = rsvp.hasCompanion;
+              document.getElementById('companionName').value = rsvp.companionName || '';
+              document.getElementById('message').value = rsvp.message || '';
+              
+              toggleCompanionFields();
+              toggleCompanionNameField();
+              
+              document.getElementById('editModal').style.display = 'block';
+            }
+            
+            // Función para cerrar el modal
+            function closeEditModal() {
+              document.getElementById('editModal').style.display = 'none';
+            }
+            
+            // Función para mostrar/ocultar campos relacionados con acompañante
+            function toggleCompanionFields() {
+              const attending = document.getElementById('attending').value === '1';
+              document.getElementById('companionSection').style.display = attending ? 'block' : 'none';
+            }
+            
+            // Función para mostrar/ocultar el campo del nombre del acompañante
+            function toggleCompanionNameField() {
+              const hasCompanion = document.getElementById('hasCompanion').value === '1';
+              document.getElementById('companionNameGroup').style.display = hasCompanion ? 'block' : 'none';
+            }
+            
+            // Función para guardar cambios en el RSVP
+            async function saveRsvp() {
+              const id = document.getElementById('rsvpId').value;
+              const rsvpData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                attending: document.getElementById('attending').value === '1',
+                hasCompanion: document.getElementById('hasCompanion').value === '1',
+                companionName: document.getElementById('companionName').value,
+                message: document.getElementById('message').value
+              };
+              
+              try {
+                const response = await fetch(\`/api/rsvps/\${id}\`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(rsvpData)
+                });
+                
+                if (response.ok) {
+                  alert('RSVP actualizado correctamente');
+                  closeEditModal();
+                  window.location.reload();
+                } else {
+                  const error = await response.json();
+                  alert(\`Error al actualizar: \${error.error}\`);
+                }
+              } catch (error) {
+                alert('Error al actualizar el RSVP');
+                console.error(error);
+              }
+            }
+            
+            // Función para eliminar un RSVP
+            async function deleteRsvp(id) {
+              if (!confirm('¿Estás seguro que deseas eliminar este RSVP?')) {
+                return;
+              }
+              
+              try {
+                const response = await fetch(\`/api/rsvps/\${id}\`, {
+                  method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                  alert('RSVP eliminado correctamente');
+                  window.location.reload();
+                } else {
+                  const error = await response.json();
+                  alert(\`Error al eliminar: \${error.error}\`);
+                }
+              } catch (error) {
+                alert('Error al eliminar el RSVP');
+                console.error(error);
+              }
+            }
+          </script>
         </body>
       </html>
     `;
