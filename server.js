@@ -22,9 +22,10 @@ app.use(express.static(path.join(__dirname, 'build')));
 app.get('/api/rsvps', async (req, res) => {
   try {
     const db = await dbPromise;
-    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     res.json(rsvps);
   } catch (error) {
+    console.error('Error reading RSVPs:', error);
     res.status(500).json({ error: 'Error reading RSVPs' });
   }
 });
@@ -36,13 +37,13 @@ app.post('/api/rsvps', async (req, res) => {
     const timestamp = new Date().toISOString();
 
     const db = await dbPromise;
-    const result = await db.run(`
+    const [result] = await db.execute(`
       INSERT INTO rsvps (name, email, phone, attending, hasCompanion, companionName, message, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, timestamp]);
 
     const newRsvp = {
-      id: result.lastID,
+      id: result.insertId,
       name,
       email,
       phone,
@@ -55,6 +56,7 @@ app.post('/api/rsvps', async (req, res) => {
 
     res.status(201).json(newRsvp);
   } catch (error) {
+    console.error('Error saving RSVP:', error);
     res.status(500).json({ error: 'Error saving RSVP' });
   }
 });
@@ -63,7 +65,7 @@ app.post('/api/rsvps', async (req, res) => {
 app.get('/admin/rsvps', async (req, res) => {
   try {
     const db = await dbPromise;
-    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
@@ -231,6 +233,7 @@ app.get('/admin/rsvps', async (req, res) => {
     `;
     res.send(html);
   } catch (error) {
+    console.error('Error loading RSVPs:', error);
     res.status(500).send('Error loading RSVPs');
   }
 });
@@ -239,7 +242,7 @@ app.get('/admin/rsvps', async (req, res) => {
 app.get('/admin/download-pdf', async (req, res) => {
   try {
     const db = await dbPromise;
-    const rsvps = await db.all('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
@@ -358,6 +361,7 @@ app.get('/admin/download-pdf', async (req, res) => {
 
     doc.end();
   } catch (error) {
+    console.error('Error generating PDF:', error);
     res.status(500).send('Error generating PDF');
   }
 });

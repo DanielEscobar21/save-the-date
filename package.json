@@ -7,18 +7,19 @@
   "scripts": {
     "start": "node server.js",
     "build": "npm install && npm run build:frontend",
+    "serve": "npm run serve:frontend",
     "build:frontend": "vite build",
+    "serve:frontend": "vite preview",
     "postinstall": "echo 'Installation complete'"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "mysql2": "^3.9.2",
     "pdfkit": "^0.14.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
-    "sqlite3": "^5.1.7",
-    "sqlite": "^5.1.1"
+    "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
     "@emotion/react": "^11.11.3",

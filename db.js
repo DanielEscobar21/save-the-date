@@ -1,30 +1,23 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Initialize database
-const dbPromise = open({
-  filename: path.join(__dirname, 'rsvps.db'),
-  driver: sqlite3.Database
+// Initialize database connection
+const dbPromise = mysql.createConnection({
+  uri: 'mysql://root:waHCvYXZmdNgzwXgqhyrncinprYaRrEm@maglev.proxy.rlwy.net:34617/railway'
 });
 
 // Create table if it doesn't exist
-dbPromise.then(async (db) => {
-  await db.exec(`
+dbPromise.then(async (connection) => {
+  await connection.execute(`
     CREATE TABLE IF NOT EXISTS rsvps (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id INTEGER PRIMARY KEY AUTO_INCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       phone TEXT,
-      attending INTEGER NOT NULL,
-      hasCompanion INTEGER DEFAULT 0,
+      attending BOOLEAN NOT NULL,
+      hasCompanion BOOLEAN DEFAULT FALSE,
       companionName TEXT,
       message TEXT,
-      timestamp TEXT NOT NULL
+      timestamp DATETIME NOT NULL
     )
   `);
 });
