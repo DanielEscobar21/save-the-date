@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PDFDocument from 'pdfkit';
-import dbPromise from './db.js';
+import pool from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,8 +21,7 @@ app.use(express.static(path.join(__dirname, 'build')));
 // Get all RSVPs
 app.get('/api/rsvps', async (req, res) => {
   try {
-    const db = await dbPromise;
-    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await pool.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     res.json(rsvps);
   } catch (error) {
     console.error('Error reading RSVPs:', error);
@@ -38,8 +37,7 @@ app.post('/api/rsvps', async (req, res) => {
     // Formato compatible con MySQL
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const db = await dbPromise;
-    const [result] = await db.execute(`
+    const [result] = await pool.execute(`
       INSERT INTO rsvps (name, email, phone, attending, hasCompanion, companionName, message, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [name, email, phone, attending ? 1 : 0, hasCompanion ? 1 : 0, companionName, message, timestamp]);
@@ -68,8 +66,7 @@ app.delete('/api/rsvps/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const db = await dbPromise;
-    const [result] = await db.execute('DELETE FROM rsvps WHERE id = ?', [id]);
+    const [result] = await pool.execute('DELETE FROM rsvps WHERE id = ?', [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'RSVP not found' });
@@ -88,8 +85,7 @@ app.put('/api/rsvps/:id', async (req, res) => {
     const { id } = req.params;
     const { name, email, phone, attending, hasCompanion, companionName, message } = req.body;
 
-    const db = await dbPromise;
-    const [result] = await db.execute(`
+    const [result] = await pool.execute(`
       UPDATE rsvps 
       SET name = ?, email = ?, phone = ?, attending = ?, 
           hasCompanion = ?, companionName = ?, message = ?
@@ -101,7 +97,7 @@ app.put('/api/rsvps/:id', async (req, res) => {
     }
 
     // Obtener el RSVP actualizado
-    const [updatedRsvp] = await db.execute('SELECT * FROM rsvps WHERE id = ?', [id]);
+    const [updatedRsvp] = await pool.execute('SELECT * FROM rsvps WHERE id = ?', [id]);
 
     res.status(200).json(updatedRsvp[0]);
   } catch (error) {
@@ -113,8 +109,7 @@ app.put('/api/rsvps/:id', async (req, res) => {
 // View RSVPs in a table format
 app.get('/admin/rsvps', async (req, res) => {
   try {
-    const db = await dbPromise;
-    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await pool.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
@@ -515,8 +510,7 @@ app.get('/admin/rsvps', async (req, res) => {
 // Generate and download PDF
 app.get('/admin/download-pdf', async (req, res) => {
   try {
-    const db = await dbPromise;
-    const [rsvps] = await db.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
+    const [rsvps] = await pool.execute('SELECT * FROM rsvps ORDER BY timestamp DESC');
     const attending = rsvps.filter(rsvp => rsvp.attending === 1);
     const notAttending = rsvps.filter(rsvp => rsvp.attending === 0);
 
